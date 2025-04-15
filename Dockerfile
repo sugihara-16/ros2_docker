@@ -39,10 +39,22 @@ RUN apt-get update && apt-get upgrade -y && \
 RUN apt-get update && apt-get install -y python3-colcon-common-extensions && \
     rm -rf /var/lib/apt/lists/
 
+# install vcs tools
+RUN apt-get update && apt-get install python3-vcstool
+
+#install git
+RUN apt-get update && apt-get install git -y
+
 # load setup.bash
 RUN echo "source /opt/ros/humble/setup.bash" >> /root/.bashrc
 
 # initialize rosdep
 RUN rosdep init && rosdep update
+
+#install emacs
+# RUN apt-get update && \
+#     apt-get install -y emacs && \
+#     apt-get clean && \
+#     rm -rf /var/lib/apt/lists/*
 
 CMD ["/bin/bash"]
