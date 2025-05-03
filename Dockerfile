@@ -1,60 +1,45 @@
-# Use ubuntu22.04 as base image
-FROM ubuntu:22.04
+FROM nvidia/opengl:base-ubuntu22.04
+ENV DEBIAN_FRONTEND=noninteractive LANG=C.UTF-8
 
-# Disenable dialogic process
-ENV DEBIAN_FRONTEND=noninteractive
-ENV LANG=C.UTF-8
-
-# install repository managers
-RUN apt-get update && apt-get install -y \
-    software-properties-common && \
+# 1) Enable universe repository
+RUN apt-get update && \
+    apt-get install -y software-properties-common && \
+    add-apt-repository universe && \
     rm -rf /var/lib/apt/lists/*
 
-# enable universe repository
-RUN add-apt-repository universe
-
-# install curl, gnupg2, lsb-release
-RUN apt-get update && apt-get install -y \
-    curl \
-    gnupg2 \
-    lsb-release && \
+# 2) Add ROS 2 apt repo
+RUN apt-get update && \
+    apt-get install -y curl gnupg2 lsb-release && \
+    curl -sSL https://raw.githubusercontent.com/ros/rosdistro/master/ros.key \
+      -o /usr/share/keyrings/ros-archive-keyring.gpg && \
+    echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/ros-archive-keyring.gpg] \
+      http://packages.ros.org/ros2/ubuntu $(lsb_release -sc) main" \
+      > /etc/apt/sources.list.d/ros2.list && \
     rm -rf /var/lib/apt/lists/*
 
-# install python3-pip
-RUN apt-get update && apt-get install -y python3-pip && \
-    rm -rf /var/lib/apt/lists/* && \
-    pip3 install -U rosdep
+# 3) Install colcon, vcstool, and other base tools
+RUN apt-get update && \
+    apt-get install -y \
+      python3-pip \
+      python3-colcon-common-extensions \
+      python3-vcstool \
+      git \
+      x11-apps && \
+    rm -rf /var/lib/apt/lists/*
 
-# get the key for apt repository for ros2
-RUN curl -sSL https://raw.githubusercontent.com/ros/rosdistro/master/ros.key \
-    -o /usr/share/keyrings/ros-archive-keyring.gpg && \
-    echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/ros-archive-keyring.gpg] http://packages.ros.org/ros2/ubuntu $(lsb_release -sc) main" \
-    > /etc/apt/sources.list.d/ros2.list
+# 4) Install ROS 2 Desktop (RViz + Gazebo)
+RUN apt-get update && \
+    apt-get install -y \
+      ros-humble-desktop \
+      ros-humble-gazebo-ros-pkgs && \
+    rm -rf /var/lib/apt/lists/*
 
-# install ROS2
-RUN apt-get update && apt-get upgrade -y && \
-    apt-get update && apt-get install -y ros-humble-desktop
+# 5) Initialize rosdep
+RUN pip3 install -U rosdep && \
+    rosdep init && \
+    rosdep update
 
-# install colcon
-RUN apt-get update && apt-get install -y python3-colcon-common-extensions && \
-    rm -rf /var/lib/apt/lists/
-
-# install vcs tools
-RUN apt-get update && apt-get install python3-vcstool
-
-#install git
-RUN apt-get update && apt-get install git -y
-
-# load setup.bash
+# 6) Source ROS 2 on container startup
 RUN echo "source /opt/ros/humble/setup.bash" >> /root/.bashrc
-
-# initialize rosdep
-RUN rosdep init && rosdep update
-
-#install emacs
-# RUN apt-get update && \
-#     apt-get install -y emacs && \
-#     apt-get clean && \
-#     rm -rf /var/lib/apt/lists/*
 
 CMD ["/bin/bash"]
