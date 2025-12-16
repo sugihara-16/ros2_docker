@@ -7,15 +7,13 @@ RUN apt-get update && \
     add-apt-repository universe && \
     rm -rf /var/lib/apt/lists/*
 
-# 2) Add ROS 2 apt repo
+# 2) Setup ROS 2 apt source via ros2-apt-source
 RUN apt-get update && \
-    apt-get install -y curl gnupg2 lsb-release && \
-    curl -sSL https://raw.githubusercontent.com/ros/rosdistro/master/ros.key \
-      -o /usr/share/keyrings/ros-archive-keyring.gpg && \
-    echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/ros-archive-keyring.gpg] \
-      http://packages.ros.org/ros2/ubuntu $(lsb_release -sc) main" \
-      > /etc/apt/sources.list.d/ros2.list && \
-    rm -rf /var/lib/apt/lists/*
+    apt-get install -y curl ca-certificates && \
+    export ROS_APT_SOURCE_VERSION=$(curl -s https://api.github.com/repos/ros-infrastructure/ros-apt-source/releases/latest | grep -F "tag_name" | awk -F\" '{print $4}') && \
+    curl -L -o /tmp/ros2-apt-source.deb "https://github.com/ros-infrastructure/ros-apt-source/releases/download/${ROS_APT_SOURCE_VERSION}/ros2-apt-source_${ROS_APT_SOURCE_VERSION}.$(. /etc/os-release && echo ${UBUNTU_CODENAME:-${VERSION_CODENAME}})_all.deb" && \
+    dpkg -i /tmp/ros2-apt-source.deb && \
+    rm -rf /var/lib/apt/lists/* /tmp/ros2-apt-source.deb
 
 # 3) Install colcon, vcstool, and other base tools
 RUN apt-get update && \
@@ -31,7 +29,9 @@ RUN apt-get update && \
 RUN apt-get update && \
     apt-get install -y \
       ros-humble-desktop \
-      ros-humble-gazebo-ros-pkgs && \
+      ros-humble-gazebo-ros-pkgs \
+      ros-humble-ros-gz-sim \
+      ros-humble-ros-gz-bridge && \
     rm -rf /var/lib/apt/lists/*
 
 # 5) Initialize rosdep
